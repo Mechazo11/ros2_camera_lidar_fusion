@@ -18,7 +18,7 @@ import numpy as np
 from cv_bridge import CvBridge
 import open3d as o3d
 from rclpy.node import Node
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image, PointCloud2, CompressedImage
 from sensor_msgs_py import point_cloud2
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 import threading
@@ -53,6 +53,7 @@ class SaveData(Node):
             return
         
         # Extract parameters
+        self.is_compressed = config_file['camera']['is_compressed']
         self.image_topic = config_file['camera']['image_topic']
         self.lidar_topic = config_file['lidar']['lidar_topic']
         self.max_file_saved = config_file['general']['max_file_saved']
@@ -65,17 +66,26 @@ class SaveData(Node):
 
         print(f"DEBUG")
         print(f"Path to data folder: {self.storage_path}")
+        print(f"Is image compressed: {self.is_compressed}")
         print(f"DEBUG")
 
         if not self.storage_path.exists():
             self.storage_path.mkdir(parents=True, exist_ok=True)
         self.get_logger().warn(f'Data will be saved at {self.storage_path}')
 
-        self.image_sub = Subscriber(
-            self,
-            Image,
-            self.image_topic
-        )
+        if not self.is_compressed:
+            self.image_sub = Subscriber(
+                self,
+                Image,
+                self.image_topic
+            )
+        else:
+            self.image_sub = Subscriber(
+                self,
+                CompressedImage,
+                self.image_topic
+            )
+
         self.pointcloud_sub = Subscriber(
             self,
             PointCloud2,
@@ -90,6 +100,7 @@ class SaveData(Node):
         self.ts.registerCallback(self.synchronize_data)
 
         self.save_data_flag = not self.keyboard_listener_enabled
+        
         if self.keyboard_listener_enabled:
             self.start_keyboard_listener()
 
@@ -129,8 +140,8 @@ class SaveData(Node):
         bridge = CvBridge()
         image = bridge.imgmsg_to_cv2(image_msg, 'bgr8')
         pointcloud = self.pointcloud2_to_open3d(pointcloud_msg)
-        o3d.io.write_point_cloud(f'{self.storage_path}/{file_name}.pcd', pointcloud)
-        cv2.imwrite(f'{self.storage_path}/{file_name}.png', image)
+        o3d.io.write_point_cloud(f'{self.storage_path.as_posix()}/{file_name}.pcd', pointcloud)
+        cv2.imwrite(f'{self.storage_path.as_posix()}/{file_name}.png', image)
         self.get_logger().info(f'Data has been saved at {self.storage_path}/{file_name}.png')
 
 
@@ -144,7 +155,6 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

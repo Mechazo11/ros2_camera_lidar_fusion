@@ -5,6 +5,7 @@ lidar:
 camera:
   image_topic: /ptah/forward/infra1/image_rect_raw/compressed
   projected_topic: ""
+  is_compressed: True
   image_size:
     width: 640
     height: 480
