@@ -2,6 +2,10 @@
 
 """
 Manually select points to establish 2D to 3D point correspondences required for camera-lidar calibration
+
+Author: Clemente Donoso, comments and minor improvements by Azmyin Md. Kamal
+Date: 11/02/2025
+AI Tool: Claude Sonnet 4.5
 """
 
 import os
@@ -10,8 +14,10 @@ import open3d as o3d
 import numpy as np
 from rclpy.node import Node
 import rclpy
+from pathlib import Path
 
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
+from ros2_camera_lidar_fusion.debug_ults import debug_lock
 
 class ImageCloudCorrespondenceNode(Node):
     def __init__(self):
@@ -25,18 +31,63 @@ class ImageCloudCorrespondenceNode(Node):
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return
-
-        self.data_dir = config_file['general']['data_folder']
+        
+        # Parse parameters
         self.file = config_file['general']['correspondence_file']
 
-        if not os.path.exists(self.data_dir):
-            self.get_logger().warn(f"Data directory '{self.data_dir}' does not exist.")
-            os.makedirs(self.data_dir)
+        self.this_pkg_path = Path().home() / config_file['general']['ros_ws_name'] / 'src'
+        self.data_dir = self.this_pkg_path / config_file['general']['data_folder']
+
+        # A `data` directory from step 1 must be created apriori
+        if not self.data_dir.exists():
+            self.get_logger().error(f"Data directory '{self.data_dir}' does not exist.")
+            return
 
         self.get_logger().info(f"Looking for .png and .pcd file pairs in '{self.data_dir}'")
+        
+        # Primary processor
         self.process_file_pairs()
 
+    def process_file_pairs(self):
+        """Process image - cloud snapshot pair. Called from constructor"""
+        file_pairs = self.get_file_pairs(self.data_dir.as_posix())
+        if not file_pairs:
+            self.get_logger().error(f"No .png / .pcd pairs found in '{self.data_dir}'")
+            return
+
+        self.get_logger().info("Found the following pairs:")
+        for prefix, png_path, pcd_path in file_pairs:
+            self.get_logger().info(f"  {prefix} -> {png_path}, {pcd_path}")
+
+        for prefix, png_path, pcd_path in file_pairs:
+            self.get_logger().info("\n========================================")
+            self.get_logger().info(f"Processing pair: {prefix}")
+            self.get_logger().info(f"Image: {png_path}")
+            self.get_logger().info(f"Point Cloud: {pcd_path}")
+            self.get_logger().info("========================================\n")
+
+            image_points = self.pick_image_points(png_path)
+            self.get_logger().info(f"\nSelected {len(image_points)} points in the image.\n")
+
+            cloud_points = self.pick_cloud_points(pcd_path)
+            self.get_logger().info(f"\nSelected {len(cloud_points)} points in the cloud.\n")
+
+            out_txt = os.path.join(self.data_dir, self.file)
+            with open(out_txt, 'w') as f:
+                f.write("# u, v, x, y, z\n")
+                min_len = min(len(image_points), len(cloud_points))
+                for i in range(min_len):
+                    (u, v) = image_points[i]
+                    (x, y, z) = cloud_points[i]
+                    f.write(f"{u},{v},{x},{y},{z}\n")
+
+            self.get_logger().info(f"Saved {min_len} correspondences in: {out_txt}")
+            self.get_logger().info("========================================")
+
+        self.get_logger().info("\nProcessing complete! Correspondences saved for all pairs.")
+
     def get_file_pairs(self, directory):
+        """Return all png-pcd file paris"""
         files = os.listdir(directory)
         pairs_dict = {}
         for f in files:
@@ -121,42 +172,7 @@ class ImageCloudCorrespondenceNode(Node):
 
         return picked_xyz
 
-    def process_file_pairs(self):
-        file_pairs = self.get_file_pairs(self.data_dir)
-        if not file_pairs:
-            self.get_logger().error(f"No .png / .pcd pairs found in '{self.data_dir}'")
-            return
-
-        self.get_logger().info("Found the following pairs:")
-        for prefix, png_path, pcd_path in file_pairs:
-            self.get_logger().info(f"  {prefix} -> {png_path}, {pcd_path}")
-
-        for prefix, png_path, pcd_path in file_pairs:
-            self.get_logger().info("\n========================================")
-            self.get_logger().info(f"Processing pair: {prefix}")
-            self.get_logger().info(f"Image: {png_path}")
-            self.get_logger().info(f"Point Cloud: {pcd_path}")
-            self.get_logger().info("========================================\n")
-
-            image_points = self.pick_image_points(png_path)
-            self.get_logger().info(f"\nSelected {len(image_points)} points in the image.\n")
-
-            cloud_points = self.pick_cloud_points(pcd_path)
-            self.get_logger().info(f"\nSelected {len(cloud_points)} points in the cloud.\n")
-
-            out_txt = os.path.join(self.data_dir, self.file)
-            with open(out_txt, 'w') as f:
-                f.write("# u, v, x, y, z\n")
-                min_len = min(len(image_points), len(cloud_points))
-                for i in range(min_len):
-                    (u, v) = image_points[i]
-                    (x, y, z) = cloud_points[i]
-                    f.write(f"{u},{v},{x},{y},{z}\n")
-
-            self.get_logger().info(f"Saved {min_len} correspondences in: {out_txt}")
-            self.get_logger().info("========================================")
-
-        self.get_logger().info("\nProcessing complete! Correspondences saved for all pairs.")
+    
 
 
 def main(args=None):

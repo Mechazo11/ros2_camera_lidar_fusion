@@ -52,9 +52,13 @@ source ./install/setup.bash
 
 ## Usage
 
-### Synchronize camera and lidar data
+### Initial setup
 
-* Ensure a `.yaml` file corresponding to the dataset you are working with, is available
+* Ensure a configuration `yaml` file corresponding to the dataset you are working with, is available. See the `nyuapril_ptah.yaml` as an example
+
+* Then perform the following steps in order. We use `ptah` dataset from COPED NYUAPRIL as a test case
+
+### Obtain data
 
 * Run the `save__data` node. Example for NYUAPRIL PTAH sequence
 
@@ -62,13 +66,20 @@ source ./install/setup.bash
 ros2 run ros2_camera_lidar_fusion save_data --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
-* Obtain camera`s intrinsics
+### Obtain camera`s intrinsics
 
 ```bash
-
+ros2 run ros2_camera_lidar_fusion get_intrinsic_camera_calibration.py  --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
-* Obtain camera to lidar synchronized data
+### Select 2D keypoints to establish correspondences
+
+```bash
+ros2 run ros2_camera_lidar_fusion extract_points.py  --ros-args -p config_file:=nyuapril_ptah.yaml
+```
+
+
+### Obtain camera to lidar synchronized data
 
 ```bash
 ros2 run ros2_camera_lidar_fusion get_extrinsic_camera_calibration --ros-args -p config_file:=nyuapril_ptah.yaml
