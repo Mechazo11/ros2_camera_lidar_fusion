@@ -143,39 +143,6 @@ class ImageCloudCorrespondenceNode(Node):
         cv2.destroyWindow(window_name)
         return points_2d
 
-    # def pick_cloud_points(self, pcd_path):
-    #     """Interactively select 3D points from a point cloud file and return their coordinates."""
-    #     pcd = o3d.io.read_point_cloud(pcd_path)
-    #     #pcd = pcd.voxel_down_sample(voxel_size=0.01)  # Adjust voxel_size as needed
-        
-    #     if pcd.is_empty():
-    #         self.get_logger().error(f"Empty or invalid point cloud: {pcd_path}")
-    #         return []
-
-    #     self.get_logger().info("\n[Open3D Instructions]")
-    #     self.get_logger().info("  - Shift + left click to select a point")
-    #     self.get_logger().info("  - Press 'q' or ESC to close the window when finished\n")
-
-    #     vis = o3d.visualization.VisualizerWithEditing()
-    #     vis.create_window(window_name="Select points on the cloud", width=640, height=480)
-    #     vis.add_geometry(pcd)
-
-    #     render_opt = vis.get_render_option()
-    #     render_opt.point_size = 1.0 # Originally 2
-
-    #     vis.run()
-    #     vis.destroy_window()
-    #     picked_indices = vis.get_picked_points()
-
-    #     np_points = np.asarray(pcd.points)
-    #     picked_xyz = []
-    #     for idx in picked_indices:
-    #         xyz = np_points[idx]
-    #         picked_xyz.append((float(xyz[0]), float(xyz[1]), float(xyz[2])))
-    #         self.get_logger().info(f"Cloud: index={idx}, coords=({xyz[0]:.3f}, {xyz[1]:.3f}, {xyz[2]:.3f})")
-
-    #     return picked_xyz
-
     def pick_cloud_points(self, pcd_path):
         """
         Interactively select 3D points from a point cloud file and return their coordinates.
@@ -189,7 +156,43 @@ class ImageCloudCorrespondenceNode(Node):
 
         windowx = 640
         windowy = 480
-        ptn_sz = 2.5
+        ptn_sz = 2.0
+
+        camera_json_path = self.data_dir / "saved_camera_view.json"
+
+        if not camera_json_path.exists():
+            # First time: let user set the default view
+            self.get_logger().info("\n[Setting Default Camera View]")
+            self.get_logger().info("  - Adjust the view as desired")
+            self.get_logger().info("  - Press 'q' or ESC to save this view\n")
+            
+            vis_setup = o3d.visualization.Visualizer()
+            vis_setup.create_window(window_name="Set default camera view", width=windowx, height=windowy)
+            vis_setup.add_geometry(pcd)
+            render_opt = vis_setup.get_render_option()
+            render_opt.point_size = ptn_sz
+            vis_setup.run()
+            
+            # Save the camera parameters
+            view_control = vis_setup.get_view_control()
+            camera_params = view_control.convert_to_pinhole_camera_parameters()
+            o3d.io.write_pinhole_camera_parameters(str(camera_json_path), camera_params)
+            vis_setup.destroy_window()
+            
+            self.get_logger().info(f"Saved default camera view to {camera_json_path}")
+
+
+        # Load saved camera view
+        camera_params = o3d.io.read_pinhole_camera_parameters(str(camera_json_path))
+
+        # Verify dimensions match, regenerate if not
+        if (camera_params.intrinsic.width != windowx or 
+            camera_params.intrinsic.height != windowy):
+            self.get_logger().warn("Saved camera dimensions don't match, regenerating...")
+            camera_json_path.unlink()
+            # Trigger the setup block again by recursion or flag
+            raise ValueError(f"Saved camera dimensions don't match")
+            # return self.pick_cloud_points(pcd_path)
 
         self.get_logger().info("\n[Open3D Instructions - Step 1: Crop Region]")
         self.get_logger().info("  - Press 'K' to lock the view")
@@ -204,10 +207,12 @@ class ImageCloudCorrespondenceNode(Node):
         vis.add_geometry(pcd)
         render_opt = vis.get_render_option()
         render_opt.point_size = ptn_sz
-        vis.run()
-        # Save camera parameters before destroying
+        
+        # Apply saved camera view from default
         view_control = vis.get_view_control()
-        camera_params = view_control.convert_to_pinhole_camera_parameters()
+        view_control.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
+        
+        vis.run()
         vis.destroy_window()
 
         # Apply cropping if polygon was drawn
@@ -231,7 +236,7 @@ class ImageCloudCorrespondenceNode(Node):
         
         # Apply saved camera view
         view_control2 = vis2.get_view_control()
-        view_control2.convert_from_pinhole_camera_parameters(camera_params)
+        view_control2.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
         
         vis2.run()
         vis2.destroy_window()
