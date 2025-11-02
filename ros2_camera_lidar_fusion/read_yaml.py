@@ -10,14 +10,10 @@ import yaml
 from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 
-def extract_configuration(config_file_name:str):
-    config_file = os.path.join(
-        get_package_share_directory('ros2_camera_lidar_fusion'),
-        'config',
-        config_file_name
-    )
-
+def extract_configuration(config_file_name: str):
+    """Return configurations parameter from the chosen yaml file."""
+    config_file = Path(get_package_share_directory('ros2_camera_lidar_fusion')) / 'config' / config_file_name
+    
     with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
-
     return config

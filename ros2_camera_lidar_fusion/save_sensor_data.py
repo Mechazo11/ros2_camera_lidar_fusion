@@ -45,10 +45,14 @@ class SaveData(Node):
         if not config_file_str or config_file_str.strip() == "":
             raise ValueError(f"SaveData: Config file name must be passed")
 
-        config_file = extract_configuration() # Uses get_package_share_directory() 
+        config_file = extract_configuration(config_file_str) # Uses get_package_share_directory() 
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return
+        
+        print(f"config file: {config_file}")
+
+        debug_lock()
         
         self.max_file_saved = config_file['general']['max_file_saved']
         self.storage_path = config_file['general']['data_folder']

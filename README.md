@@ -30,7 +30,8 @@ This package includes the following ROS2 nodes for camera and LiDAR calibration:
 ### Prerequisites
 
 To run this package, ensure the following dependencies are installed:
-- **Git**: For version control and repository management.
+- **ROS2**: Humble or later
+- **Open3D**: An open-source library that supports rapid development of software that deals with 3D data. Warning better to install `open3d<=0.18` as there are libraries that relies on the older version of `numpy<=1.26.4`
 - **Docker**: To streamline the environment setup and execution.
 - **NVIDIA Container Toolkit** (if using an NVIDIA GPU): For hardware acceleration.
 
@@ -51,8 +52,15 @@ source ./install/setup.bash
 
 ## Usage
 
-### Synchronize 
+### Synchronize camera and lidar data
 
+* Ensure a `.yaml` file corresponding to the dataset you are working with, is available
+
+* Run the `save__data` node. Example for NYUAPRIL PTAH sequence
+
+```bash
+ros2 run ros2_camera_lidar_fusion save_data --ros-args -p config_file:=nyuapril_ptah.yaml
+```
 
 ### Workflow
 Follow these steps to perform calibration and data fusion:
