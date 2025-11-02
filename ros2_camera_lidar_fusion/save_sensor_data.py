@@ -27,11 +27,6 @@ from pathlib import Path
 # Imports from this library
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
 
-def debug_lock():
-    """Locks system in an infinite loop for debugging."""
-    print("LOCK")
-    while (1):
-        pass
 
 class SaveData(Node):
     def __init__(self):
@@ -41,13 +36,9 @@ class SaveData(Node):
         # Declare ROS2 parameter
         self.declare_parameter('config_file', '')
         config_file_str = self.get_parameter('config_file').get_parameter_value().string_value
-        path_to_package = None # Absolute path to this package
-
-        # Config file name string cannot be empty or a blank string
-        if not config_file_str or config_file_str.strip() == "":
-            raise ValueError(f"SaveData: Config file name must be passed")
-
         config_file, _ = extract_configuration(config_file_str) # Uses get_package_share_directory() 
+        
+        # Guard
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return

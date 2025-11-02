@@ -62,6 +62,12 @@ source ./install/setup.bash
 ros2 run ros2_camera_lidar_fusion save_data --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
+* Obtain camera to lidar synchronized data
+
+```bash
+ros2 run ros2_camera_lidar_fusion get_extrinsic_camera_calibration --ros-args -p config_file:=nyuapril_ptah.yaml
+```
+
 ### Workflow
 Follow these steps to perform calibration and data fusion:
 

@@ -1,30 +1,60 @@
 #!/usr/bin/env python3
 
+"""
+Obtain camera to lidar extrinc calibration (4x4 transform matrix)
+
+Author: Clemente Donoso, comments and minor improvements by Azmyin Md. Kamal
+Date: 11/02/2025
+AI Tool: Claude Sonnet 4.5
+"""
+
+# Imports
 import os
 import yaml
 import numpy as np
 import cv2
 from rclpy.node import Node
 import rclpy
+from pathlib import Path
 
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
+from ros2_camera_lidar_fusion.debug_ults import debug_lock
 
 class CameraLidarExtrinsicNode(Node):
     def __init__(self):
         super().__init__('camera_lidar_extrinsic_node')
         
-        config_file = extract_configuration()
+        # Declare ROS2 parameter
+        self.declare_parameter('config_file', '')
+        config_file_str = self.get_parameter('config_file').get_parameter_value().string_value
+        config_file,_ = extract_configuration(config_file_str)
+
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return
         
+        # Read in file names
         self.corr_file = config_file['general']['correspondence_file']
-        self.corr_file = f'/ros2_ws/src/ros2_camera_lidar_fusion/data/{self.corr_file}'
         self.camera_yaml = config_file['general']['camera_intrinsic_calibration']
-        self.camera_yaml = f'/ros2_ws/src/ros2_camera_lidar_fusion/config/{self.camera_yaml}'
-        self.output_dir = config_file['general']['config_folder']
         self.file = config_file['general']['camera_extrinsic_calibration']
+        
+        # Setup paths
+        self.this_pkg_path = Path().home() / config_file['general']['ros_ws_name'] / 'src'
+        self.storage_path = self.this_pkg_path / config_file['general']['data_folder']
+        self.output_dir = self.this_pkg_path / config_file['general']['config_folder']
+        self.corr_file = self.storage_path / f"{self.corr_file}" 
+        self.camera_yaml = self.output_dir / self.camera_yaml 
 
+        print(f"Debug")
+        print(f"Data path: {self.storage_path}")
+        print(f"Correspondence save path: {self.corr_file}")
+        print(f"Camera instric yaml file: {self.camera_yaml}")
+        print(f"\Debug")
+        
+        debug_lock()
+
+        #! TODO resume from here after running intrinsic calibration and verifying if the parameters are generated correctly
+        
         self.get_logger().info('Starting extrinsic calibration...')
         self.solve_extrinsic_with_pnp()
 
