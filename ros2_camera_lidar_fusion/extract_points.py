@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Manually select points to establish 2D to 3D point correspondences required for camera-lidar calibration
+"""
+
 import os
 import cv2
 import open3d as o3d
@@ -13,11 +17,15 @@ class ImageCloudCorrespondenceNode(Node):
     def __init__(self):
         super().__init__('image_cloud_correspondence_node')
 
-        config_file = extract_configuration()
+        # Declare ROS2 parameter
+        self.declare_parameter('config_file', '')
+        config_file_str = self.get_parameter('config_file').get_parameter_value().string_value
+        config_file,_ = extract_configuration(config_file_str)
+
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return
-        
+
         self.data_dir = config_file['general']['data_folder']
         self.file = config_file['general']['correspondence_file']
 

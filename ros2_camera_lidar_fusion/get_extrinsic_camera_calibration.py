@@ -50,11 +50,7 @@ class CameraLidarExtrinsicNode(Node):
         print(f"Correspondence save path: {self.corr_file}")
         print(f"Camera instric yaml file: {self.camera_yaml}")
         print(f"\Debug")
-        
-        debug_lock()
-
-        #! TODO resume from here after running intrinsic calibration and verifying if the parameters are generated correctly
-        
+                
         self.get_logger().info('Starting extrinsic calibration...')
         self.solve_extrinsic_with_pnp()
 
@@ -81,6 +77,8 @@ class CameraLidarExtrinsicNode(Node):
 
         if not os.path.isfile(self.corr_file):
             raise FileNotFoundError(f"Correspondence file not found: {self.corr_file}")
+
+        debug_lock() #! TODO RESUME FROM HERE
 
         pts_2d = []
         pts_3d = []

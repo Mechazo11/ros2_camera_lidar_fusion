@@ -62,6 +62,12 @@ source ./install/setup.bash
 ros2 run ros2_camera_lidar_fusion save_data --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
+* Obtain camera`s intrinsics
+
+```bash
+
+```
+
 * Obtain camera to lidar synchronized data
 
 ```bash
@@ -71,14 +77,14 @@ ros2 run ros2_camera_lidar_fusion get_extrinsic_camera_calibration --ros-args -p
 ### Workflow
 Follow these steps to perform calibration and data fusion:
 
-1. **Intrinsic Calibration**  
-   Run `get_intrinsic_camera_calibration.py` to generate the intrinsic calibration file for the camera.
-
-2. **Data Recording**  
+1. **Data Recording**  
    Use `save_sensor_data.py` to capture and save synchronized data from the camera and LiDAR.
 
+2. **Intrinsic Calibration**  
+   Run `get_intrinsic_camera_calibration.py` to generate the intrinsic calibration file for the camera.
+
 3. **Point Correspondence**  
-   Execute `extract_points.py` to manually select corresponding points between camera and LiDAR.
+   Execute `extract_points.py` to manually select corresponding points between camera and LiDAR. This generate the `ros2_camera_lidar_fusion_correspondences.txt` file
 
 4. **Extrinsic Calibration**  
    Run `get_extrinsic_camera_calibration.py` to compute the transformation matrix between camera and LiDAR.
