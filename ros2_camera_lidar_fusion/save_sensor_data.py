@@ -106,23 +106,27 @@ class SaveData(Node):
 
     def start_keyboard_listener(self):
         """Starts a thread to listen for keyboard events."""
-        def listen_for_space():
+        def listen_for_enter():
             while True:
-                key = input("Press 'Enter' to save data (keyboard listener enabled): ")
+                key = input("Press 'Enter' to save next synchronized frame: ")
                 if key.strip() == '':
                     self.save_data_flag = True
-                    self.get_logger().info('Space key pressed, ready to save data')
-        thread = threading.Thread(target=listen_for_space, daemon=True)
+                    self.get_logger().info('Enter pressed - will save next synchronized frame')
+        thread = threading.Thread(target=listen_for_enter, daemon=True)
         thread.start()
 
     def synchronize_data(self, image_msg, pointcloud_msg):
         """Handles synchronized messages and saves data if the flag is set."""
         if self.save_data_flag:
-            file_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.get_logger().info(f'Synchronizing data at {file_name}')
             total_files = len(os.listdir(self.storage_path))
             if total_files < self.max_file_saved:
+                file_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                self.get_logger().info(f'Saving synchronized data: {file_name}')
                 self.save_data(image_msg, pointcloud_msg, file_name)
+                if self.keyboard_listener_enabled:
+                    self.save_data_flag = False
+            else:
+                self.get_logger().warn(f'Max files reached ({self.max_file_saved})')
                 if self.keyboard_listener_enabled:
                     self.save_data_flag = False
 
@@ -138,7 +142,12 @@ class SaveData(Node):
     def save_data(self, image_msg, pointcloud_msg, file_name):
         """Saves image and point cloud data to the storage path."""
         bridge = CvBridge()
-        image = bridge.imgmsg_to_cv2(image_msg, 'bgr8')
+
+        if self.is_compressed:
+            image = bridge.compressed_imgmsg_to_cv2(image_msg, 'bgr8')
+        else:
+            image = bridge.imgmsg_to_cv2(image_msg, 'bgr8')
+
         pointcloud = self.pointcloud2_to_open3d(pointcloud_msg)
         o3d.io.write_point_cloud(f'{self.storage_path.as_posix()}/{file_name}.pcd', pointcloud)
         cv2.imwrite(f'{self.storage_path.as_posix()}/{file_name}.png', image)

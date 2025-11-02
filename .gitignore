@@ -7,4 +7,21 @@ camera_intrinsic_calibration.yaml
 log
 /data
 
-data/*
+/data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
