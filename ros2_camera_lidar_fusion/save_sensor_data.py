@@ -22,6 +22,7 @@ from sensor_msgs.msg import Image, PointCloud2
 from sensor_msgs_py import point_cloud2
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 import threading
+from pathlib import Path
 
 # Imports from this library
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
@@ -40,29 +41,34 @@ class SaveData(Node):
         # Declare ROS2 parameter
         self.declare_parameter('config_file', '')
         config_file_str = self.get_parameter('config_file').get_parameter_value().string_value
-        
+        path_to_package = None # Absolute path to this package
+
         # Config file name string cannot be empty or a blank string
         if not config_file_str or config_file_str.strip() == "":
             raise ValueError(f"SaveData: Config file name must be passed")
 
-        config_file = extract_configuration(config_file_str) # Uses get_package_share_directory() 
+        config_file, _ = extract_configuration(config_file_str) # Uses get_package_share_directory() 
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return
         
-        print(f"config file: {config_file}")
-
-        debug_lock()
-        
-        self.max_file_saved = config_file['general']['max_file_saved']
-        self.storage_path = config_file['general']['data_folder']
+        # Extract parameters
         self.image_topic = config_file['camera']['image_topic']
         self.lidar_topic = config_file['lidar']['lidar_topic']
+        self.max_file_saved = config_file['general']['max_file_saved']
+
+        self.this_pkg_path = Path().home() / config_file['general']['ros_ws_name'] / 'src'
+        self.storage_path = self.this_pkg_path / config_file['general']['data_folder']
+        
         self.keyboard_listener_enabled = config_file['general']['keyboard_listener']
         self.slop = config_file['general']['slop']
 
-        if not os.path.exists(self.storage_path):
-            os.makedirs(self.storage_path)
+        print(f"DEBUG")
+        print(f"Path to data folder: {self.storage_path}")
+        print(f"DEBUG")
+
+        if not self.storage_path.exists():
+            self.storage_path.mkdir(parents=True, exist_ok=True)
         self.get_logger().warn(f'Data will be saved at {self.storage_path}')
 
         self.image_sub = Subscriber(
