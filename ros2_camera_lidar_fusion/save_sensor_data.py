@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 
+"""
+ROS2 node for synchronized capture and storage of camera images and LiDAR point clouds.
+
+Author: Clemente Donoso, comments and minor improvements by Azmyin Md. Kamal
+Date: 11/02/2025
+AI Tool: Claude Sonnet 4.5
+
+Key notes
+* message_filters package is used with ApproximateTimeSynchronizer used to synchronize images and lidar cloud
+* images are saved as .png, lidar scans are saved as Open3D->PCD
+"""
+
+# Import
 import rclpy, os, cv2, datetime
 import numpy as np
 from cv_bridge import CvBridge
@@ -10,14 +23,29 @@ from sensor_msgs_py import point_cloud2
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 import threading
 
+# Imports from this library
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
+
+def debug_lock():
+    """Locks system in an infinite loop for debugging."""
+    print("LOCK")
+    while (1):
+        pass
 
 class SaveData(Node):
     def __init__(self):
         super().__init__('save_data_node')
         self.get_logger().info('Save data node has been started')
 
-        config_file = extract_configuration()
+        # Declare ROS2 parameter
+        self.declare_parameter('config_file', '')
+        config_file_str = self.get_parameter('config_file').get_parameter_value().string_value
+        
+        # Config file name string cannot be empty or a blank string
+        if not config_file_str or config_file_str.strip() == "":
+            raise ValueError(f"SaveData: Config file name must be passed")
+
+        config_file = extract_configuration() # Uses get_package_share_directory() 
         if config_file is None:
             self.get_logger().error("Failed to extract configuration file.")
             return

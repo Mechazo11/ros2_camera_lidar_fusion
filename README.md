@@ -6,31 +6,24 @@
 A ROS2 package for calculating **intrinsic** and **extrinsic calibration** between camera and LiDAR sensors. This repository provides an intuitive workflow to fuse data from these sensors, enabling precise projection of LiDAR points into the camera frame and offering an efficient approach to sensor fusion.
 
 ## Visual Overview
+
+* Credit: CDonosoK
+
 | **Static Sensors** | **Moving Sensors** |
 |---------------------|--------------------|
 | <img src="https://github.com/CDonosoK/ros2_camera_lidar_fusion/blob/main/assets/static_sensors.gif" alt="Static Sensors" width="400"> | <img src="https://github.com/CDonosoK/ros2_camera_lidar_fusion/blob/dev/assets/moving_sensors.gif" alt="Moving Sensors" width="400"> |
 
-## Support 💖
+## Node Overview
+This package includes the following ROS2 nodes for camera and LiDAR calibration:
 
-If you find this project helpful and want to support its ongoing development, you can buy me a coffee! Every contribution helps me dedicate more time to improving and maintaining open-source software.
+| **Node Name**           | **Description**                                                                                       | **Output**                                     |
+|--------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------|
+| `get_intrinsic_camera_calibration.py`  | Computes the intrinsic calibration of the camera.                                                    | Camera intrinsic calibration file.            |
+| `save_sensor_data.py`    | Records synchronized data from camera and LiDAR sensors.                                             | Sensor data file.                             |
+| `extract_points.py`      | Allows manual selection of corresponding points between camera and LiDAR.                            | Corresponding points file.                    |
+| `get_extrinsic_camera_calibration.py` | Computes the extrinsic calibration between camera and LiDAR sensors.                                | Extrinsic calibration file.                   |
+| `lidar_camera_projection.py` | Projects LiDAR points into the camera frame using intrinsic and extrinsic calibration parameters. | Visualization of projected points.            |
 
-<a href="https://www.buymeacoffee.com/CDonosoK" target="https://buymeacoffee.com/cdonosok">
-  <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-orange?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white" alt="Buy Me a Coffee">
-</a>
-
----
-
-## Table of Contents
-1. [Get Started](#get-started)
-   - [Prerequisites](#prerequisites)
-   - [Installation](#installation)
-2. [Usage](#usage)
-   - [Node Overview](#node-overview)
-   - [Workflow](#workflow)
-   - [Running Nodes](#running-nodes)
-3. [License](#license)
-
----
 
 ## Get Started
 
@@ -43,44 +36,23 @@ To run this package, ensure the following dependencies are installed:
 
 ### Installation
 
-#### Clone the Repository
-Start by cloning the repository:
+### Build from source
+
+* Clone this repository to a pre-existing ROS 2 workspace
 ```bash
-git clone git@github.com:CDonosoK/ros2_camera_lidar_fusion.git
+cd ~/ros2_test_ws/src
+git clone -b az_dev --single-branch https://github.com/Mechazo11/ros2_camera_lidar_fusion.git
+cd ..
+rosdep install -r --from-paths src --rosdistro ${ROS_DISTRO} -i -y
+colcon build --symlink-install
+source ./install/setup.bash
 ```
 
-#### Build Using Docker
-This repository includes a pre-configured Docker setup for easy deployment. To build the Docker image:
-1. Navigate to the `docker` directory:
-   ```bash
-   cd ros2_camera_lidar_fusion/docker
-   ```
-2. Run the build script:
-   ```bash
-   sh build.sh
-   ```
-   This will create a Docker image named `ros2_camera_lidar_fusion`.
-
-#### Run the Docker Container
-Once built, launch the container using:
-```bash
-sh run.sh
-```
-
----
 
 ## Usage
 
-### Node Overview
-This package includes the following ROS2 nodes for camera and LiDAR calibration:
+### Synchronize 
 
-| **Node Name**           | **Description**                                                                                       | **Output**                                     |
-|--------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------|
-| `get_intrinsic_camera_calibration.py`  | Computes the intrinsic calibration of the camera.                                                    | Camera intrinsic calibration file.            |
-| `save_sensor_data.py`    | Records synchronized data from camera and LiDAR sensors.                                             | Sensor data file.                             |
-| `extract_points.py`      | Allows manual selection of corresponding points between camera and LiDAR.                            | Corresponding points file.                    |
-| `get_extrinsic_camera_calibration.py` | Computes the extrinsic calibration between camera and LiDAR sensors.                                | Extrinsic calibration file.                   |
-| `lidar_camera_projection.py` | Projects LiDAR points into the camera frame using intrinsic and extrinsic calibration parameters. | Visualization of projected points.            |
 
 ### Workflow
 Follow these steps to perform calibration and data fusion:
@@ -126,3 +98,30 @@ This project is licensed under the **MIT**. See the [LICENSE](LICENSE) file for 
 
 ---
 Contributions and feedback are welcome! If you encounter any issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
+
+
+
+## Misc
+
+## Support 💖
+
+If you find this project helpful and want to support its ongoing development, please consider supporting CDonosoK. The original repo can be found here https://github.com/CDonosoK/ros2_camera_lidar_fusion
+---
+
+#### Build Using Docker
+This repository includes a pre-configured Docker setup for easy deployment. To build the Docker image:
+1. Navigate to the `docker` directory:
+   ```bash
+   cd ros2_camera_lidar_fusion/docker
+   ```
+2. Run the build script:
+   ```bash
+   sh build.sh
+   ```
+   This will create a Docker image named `ros2_camera_lidar_fusion`.
+
+#### Run the Docker Container
+Once built, launch the container using:
+```bash
+sh run.sh
+```
