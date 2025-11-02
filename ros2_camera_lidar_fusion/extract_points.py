@@ -113,6 +113,7 @@ class ImageCloudCorrespondenceNode(Node):
         return file_pairs
 
     def pick_image_points(self, image_path):
+        """Pick 2D points and display them on OpenCV window"""
         img = cv2.imread(image_path)
         if img is None:
             self.get_logger().error(f"Error loading image: {image_path}")
@@ -143,7 +144,10 @@ class ImageCloudCorrespondenceNode(Node):
         return points_2d
 
     def pick_cloud_points(self, pcd_path):
+        """Interactively select 3D points from a point cloud file and return their coordinates."""
         pcd = o3d.io.read_point_cloud(pcd_path)
+        #pcd = pcd.voxel_down_sample(voxel_size=0.01)  # Adjust voxel_size as needed
+        
         if pcd.is_empty():
             self.get_logger().error(f"Empty or invalid point cloud: {pcd_path}")
             return []
@@ -153,11 +157,11 @@ class ImageCloudCorrespondenceNode(Node):
         self.get_logger().info("  - Press 'q' or ESC to close the window when finished\n")
 
         vis = o3d.visualization.VisualizerWithEditing()
-        vis.create_window(window_name="Select points on the cloud", width=1280, height=720)
+        vis.create_window(window_name="Select points on the cloud", width=640, height=480)
         vis.add_geometry(pcd)
 
         render_opt = vis.get_render_option()
-        render_opt.point_size = 2.0
+        render_opt.point_size = 1.0 # Originally 2
 
         vis.run()
         vis.destroy_window()
