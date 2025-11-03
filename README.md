@@ -78,11 +78,16 @@ ros2 run ros2_camera_lidar_fusion get_intrinsic_camera_calibration.py  --ros-arg
 ros2 run ros2_camera_lidar_fusion extract_points.py  --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
-
 ### Obtain camera to lidar synchronized data
 
 ```bash
 ros2 run ros2_camera_lidar_fusion get_extrinsic_camera_calibration --ros-args -p config_file:=nyuapril_ptah.yaml
+```
+
+### Test visualization
+
+```bash
+ros2 run ros2_camera_lidar_fusion lidar_camera_projection --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
 ### Workflow

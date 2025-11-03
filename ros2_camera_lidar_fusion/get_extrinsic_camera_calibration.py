@@ -18,7 +18,7 @@ import rclpy
 from pathlib import Path
 
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
-from ros2_camera_lidar_fusion.debug_ults import debug_lock
+from ros2_camera_lidar_fusion.utils import debug_lock
 
 class CameraLidarExtrinsicNode(Node):
     def __init__(self):

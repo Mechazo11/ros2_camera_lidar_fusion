@@ -1,26 +1,40 @@
 #!/usr/bin/env python3
 
-import os
+"""
+Test Lidar's projection on camera images using the obtained T_lidar_to_cam extrinsic
+
+Author: Clemente Donoso, comments and minor improvements by Azmyin Md. Kamal
+Date: 11/02/2025
+AI Tool: Claude Sonnet 4.5
+"""
+
+# Impport
+# import os
+from pathlib import Path
 import rclpy
 from rclpy.node import Node
-
 import cv2
 import numpy as np
 import yaml
 import struct
 
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import CompressedImage, Image, PointCloud2
 from cv_bridge import CvBridge
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from ros2_camera_lidar_fusion.read_yaml import extract_configuration
+from ros2_camera_lidar_fusion.utils import debug_lock
 
 
-def load_extrinsic_matrix(yaml_path: str) -> np.ndarray:
-    if not os.path.isfile(yaml_path):
-        raise FileNotFoundError(f"No extrinsic file found: {yaml_path}")
+# TODO move these three methods to utils
+def load_extrinsic_matrix(yaml_path: Path) -> np.ndarray:
+    # if not os.path.isfile(yaml_path):
+    #     raise FileNotFoundError(f"No extrinsic file found: {yaml_path}")
 
-    with open(yaml_path, 'r') as f:
+    if not yaml_path.exists():
+        raise FileNotFoundError(f"T_lidar_to_camera extrinsic file no found in {yaml_path}")
+
+    with open(yaml_path.as_posix(), 'r') as f:
         data = yaml.safe_load(f)
 
     if 'extrinsic_matrix' not in data:
@@ -32,15 +46,15 @@ def load_extrinsic_matrix(yaml_path: str) -> np.ndarray:
         raise ValueError("Extrinsic matrix is not 4x4.")
     return T
 
-def load_camera_calibration(yaml_path: str) -> (np.ndarray, np.ndarray):
-    if not os.path.isfile(yaml_path):
-        raise FileNotFoundError(f"No camera calibration file: {yaml_path}")
+def load_camera_calibration(yaml_path: Path) -> (np.ndarray, np.ndarray):
+    if not yaml_path.exists():
+        raise FileNotFoundError(f"No camera intrinsic calibration file found in {yaml_path}")
 
     with open(yaml_path, 'r') as f:
         calib_data = yaml.safe_load(f)
 
     cam_mat_data = calib_data['camera_matrix']['data']
-    camera_matrix = np.array(cam_mat_data, dtype=np.float64)
+    camera_matrix = np.array(cam_mat_data, dtype=np.float64).reshape((3, 3))  # Reshapes to 3x3 matrix
 
     dist_data = calib_data['distortion_coefficients']['data']
     dist_coeffs = np.array(dist_data, dtype=np.float64).reshape((1, -1))
@@ -82,30 +96,53 @@ class LidarCameraProjectionNode(Node):
     def __init__(self):
         super().__init__('lidar_camera_projection_node')
         
-        config_file = extract_configuration()
-        if config_file is None:
-            self.get_logger().error("Failed to extract configuration file.")
-            return
+        # Declare ROS2 parameter
+        self.declare_parameter('config_file', '')
+        config_file_str = self.get_parameter('config_file').get_parameter_value().string_value
+        config_file, _ = extract_configuration(config_file_str) # Uses get_package_share_directory() 
         
-        config_folder = config_file['general']['config_folder']
-        extrinsic_yaml = config_file['general']['camera_extrinsic_calibration']
-        extrinsic_yaml = os.path.join(config_folder, extrinsic_yaml)
-        self.T_lidar_to_cam = load_extrinsic_matrix(extrinsic_yaml)
+        # Build paths to core parameters
 
-        camera_yaml = config_file['general']['camera_intrinsic_calibration']
-        camera_yaml = os.path.join(config_folder, camera_yaml)
-        self.camera_matrix, self.dist_coeffs = load_camera_calibration(camera_yaml)
+        self.this_pkg_path = Path().home() / config_file['general']['ros_ws_name'] / 'src'
+        self.data_dir = self.this_pkg_path / config_file['general']['data_folder']
+        self.config_folder = self.this_pkg_path / config_file['general']['config_folder']
+        
+        self.extrinsic_yaml = self.config_folder / config_file['general']['camera_extrinsic_calibration']
+        self.camera_yaml = self.config_folder / config_file['general']['camera_intrinsic_calibration']
+        self.is_compressed = config_file['camera']['is_compressed']
+        self.image_topic = config_file['camera']['image_topic']
+        self.lidar_topic = config_file['lidar']['lidar_topic']
 
+     
+        self.T_lidar_to_cam = load_extrinsic_matrix(self.extrinsic_yaml)
+        self.camera_matrix, self.dist_coeffs = load_camera_calibration(self.camera_yaml)
+
+        print(f"DEBUG")
+        print(f"camera yaml: {self.data_dir}")
+        print(f"extrinsic yaml: {self.extrinsic_yaml}")
+        print(f"Is image compressed: {self.is_compressed}")
         self.get_logger().info("Loaded extrinsic:\n{}".format(self.T_lidar_to_cam))
         self.get_logger().info("Camera matrix:\n{}".format(self.camera_matrix))
         self.get_logger().info("Distortion coeffs:\n{}".format(self.dist_coeffs))
+        self.get_logger().info(f"Subscribing to lidar topic: {self.lidar_topic}")
+        self.get_logger().info(f"Subscribing to image topic: {self.image_topic}")
 
-        lidar_topic = config_file['lidar']['lidar_topic']
-        image_topic = config_file['camera']['image_topic']
-        self.get_logger().info(f"Subscribing to lidar topic: {lidar_topic}")
-        self.get_logger().info(f"Subscribing to image topic: {image_topic}")
 
-        self.image_sub = Subscriber(self, Image, image_topic)
+        debug_lock()
+        
+        if not self.is_compressed:
+            self.image_sub = Subscriber(
+                self,
+                Image,
+                self.image_topic
+            )
+        else:
+            self.image_sub = Subscriber(
+                self,
+                CompressedImage,
+                self.image_topic
+            )
+        
         self.lidar_sub = Subscriber(self, PointCloud2, lidar_topic)
 
         self.ts = ApproximateTimeSynchronizer(
