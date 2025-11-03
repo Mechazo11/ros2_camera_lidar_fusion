@@ -64,6 +64,7 @@ class CameraLidarExtrinsicNode(Node):
 
         mat_data = config['camera_matrix']['data']
         camera_matrix = np.array(mat_data, dtype=np.float64)
+        camera_matrix = np.array(mat_data, dtype=np.float64).reshape((3, 3))  # Add reshape
         dist_data = config['distortion_coefficients']['data']
         dist_coeffs = np.array(dist_data, dtype=np.float64).reshape((1, -1))
 
@@ -77,8 +78,8 @@ class CameraLidarExtrinsicNode(Node):
 
         if not os.path.isfile(self.corr_file):
             raise FileNotFoundError(f"Correspondence file not found: {self.corr_file}")
-
-        debug_lock() #! TODO RESUME FROM HERE
+        else:
+            self.get_logger().info(f"Found correspondence file in: {self.corr_file}")
 
         pts_2d = []
         pts_3d = []
@@ -100,8 +101,8 @@ class CameraLidarExtrinsicNode(Node):
         num_points = len(pts_2d)
         self.get_logger().info(f"Loaded {num_points} correspondences from {self.corr_file}")
 
-        if num_points < 4:
-            raise ValueError("At least 4 correspondences are required for solvePnP")
+        if num_points < 6:
+            raise ValueError("More than 6 correspondences are required for solvePnP")
 
         success, rvec, tvec = cv2.solvePnP(
             pts_3d,
@@ -124,20 +125,21 @@ class CameraLidarExtrinsicNode(Node):
         T_lidar_to_cam[0:3, 0:3] = R
         T_lidar_to_cam[0:3, 3] = tvec[:, 0]
 
-        self.get_logger().info(f"Transformation matrix (LiDAR -> Camera):\n{T_lidar_to_cam}")
+        self.get_logger().info(f"Transformation matrix (LiDAR -> Camera):\n{T_lidar_to_cam}") # Tcl 
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        # TODO need to fix path using new path module
+        # if not os.path.exists(self.output_dir):
+        #     os.makedirs(self.output_dir)
 
-        out_yaml = os.path.join(self.output_dir, self.file)
-        data_out = {
-            "extrinsic_matrix": T_lidar_to_cam.tolist()
-        }
+        # out_yaml = os.path.join(self.output_dir, self.file)
+        # data_out = {
+        #     "extrinsic_matrix": T_lidar_to_cam.tolist()
+        # }
 
-        with open(out_yaml, 'w') as f:
-            yaml.dump(data_out, f, sort_keys=False)
+        # with open(out_yaml, 'w') as f:
+        #     yaml.dump(data_out, f, sort_keys=False)
 
-        self.get_logger().info(f"Extrinsic matrix saved to: {out_yaml}")
+        # self.get_logger().info(f"Extrinsic matrix saved to: {out_yaml}")
 
 
 def main(args=None):

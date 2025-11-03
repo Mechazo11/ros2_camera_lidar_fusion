@@ -73,6 +73,7 @@ class ImageCloudCorrespondenceNode(Node):
             self.get_logger().info(f"\nSelected {len(cloud_points)} points in the cloud.\n")
 
             out_txt = os.path.join(self.data_dir, self.file)
+            # Assumes the order in which 2D points and 3D points were picked, are preserved
             with open(out_txt, 'w') as f:
                 f.write("# u, v, x, y, z\n")
                 min_len = min(len(image_points), len(cloud_points))
@@ -144,11 +145,7 @@ class ImageCloudCorrespondenceNode(Node):
         return points_2d
 
     def pick_cloud_points(self, pcd_path):
-        """
-        Interactively select 3D points from a point cloud file and return their coordinates.
-        
-        Credit: Claude Sonnet 4.5 for adding the camera view hold and use of polygon cropping to crop out lidar cloud
-        """
+        """Interactively select 3D points from a point cloud file and return their coordinates."""
         pcd = o3d.io.read_point_cloud(pcd_path)
         if pcd.is_empty():
             self.get_logger().error(f"Empty or invalid point cloud: {pcd_path}")
@@ -157,13 +154,11 @@ class ImageCloudCorrespondenceNode(Node):
         windowx = 640
         windowy = 480
         ptn_sz = 2.0
-
         camera_json_path = self.data_dir / "saved_camera_view.json"
 
         if not camera_json_path.exists():
-            # First time: let user set the default view
             self.get_logger().info("\n[Setting Default Camera View]")
-            self.get_logger().info("  - Adjust the view as desired")
+            self.get_logger().info("  - Adjust view to show region of interest")
             self.get_logger().info("  - Press 'q' or ESC to save this view\n")
             
             vis_setup = o3d.visualization.Visualizer()
@@ -173,76 +168,38 @@ class ImageCloudCorrespondenceNode(Node):
             render_opt.point_size = ptn_sz
             vis_setup.run()
             
-            # Save the camera parameters
             view_control = vis_setup.get_view_control()
             camera_params = view_control.convert_to_pinhole_camera_parameters()
             o3d.io.write_pinhole_camera_parameters(str(camera_json_path), camera_params)
             vis_setup.destroy_window()
-            
             self.get_logger().info(f"Saved default camera view to {camera_json_path}")
 
-
-        # Load saved camera view
         camera_params = o3d.io.read_pinhole_camera_parameters(str(camera_json_path))
 
-        # Verify dimensions match, regenerate if not
         if (camera_params.intrinsic.width != windowx or 
             camera_params.intrinsic.height != windowy):
             self.get_logger().warn("Saved camera dimensions don't match, regenerating...")
             camera_json_path.unlink()
-            # Trigger the setup block again by recursion or flag
-            raise ValueError(f"Saved camera dimensions don't match")
-            # return self.pick_cloud_points(pcd_path)
+            raise ValueError("Saved camera dimensions don't match")
 
-        self.get_logger().info("\n[Open3D Instructions - Step 1: Crop Region]")
-        self.get_logger().info("  - Press 'K' to lock the view")
-        self.get_logger().info("  - Draw a polygon by shift + left click")
-        self.get_logger().info("  - Press 'C' to crop the region")
-        self.get_logger().info("  - Press 'F' to finish cropping")
-        self.get_logger().info("  - Press 'q' or ESC to skip cropping\n")
+        self.get_logger().info("\n[Open3D Instructions - Select Points]")
+        self.get_logger().info("  - Shift + left click to select points")
+        self.get_logger().info("  - Press 'q' or ESC when finished\n")
 
-        # Step 1: Crop the point cloud
         vis = o3d.visualization.VisualizerWithEditing()
-        vis.create_window(window_name="Crop point cloud region", width=windowx, height=windowy)
+        vis.create_window(window_name="Select points", width=windowx, height=windowy)
         vis.add_geometry(pcd)
         render_opt = vis.get_render_option()
         render_opt.point_size = ptn_sz
         
-        # Apply saved camera view from default
         view_control = vis.get_view_control()
         view_control.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
         
         vis.run()
         vis.destroy_window()
-
-        # Apply cropping if polygon was drawn
-        cropped_pcd = pcd
-        if vis.get_cropped_geometry():
-            cropped_pcd = vis.get_cropped_geometry()
-            self.get_logger().info(f"Cropped cloud: {len(cropped_pcd.points)} points remaining")
-        else:
-            self.get_logger().info("No cropping applied, using full point cloud")
-
-        # Step 2: Select points from cropped cloud
-        self.get_logger().info("\n[Open3D Instructions - Step 2: Select Points]")
-        self.get_logger().info("  - Shift + left click to select a point")
-        self.get_logger().info("  - Press 'q' or ESC to close the window when finished\n")
-
-        vis2 = o3d.visualization.VisualizerWithEditing()
-        vis2.create_window(window_name="Select points on the cloud", width=windowx, height=windowy)
-        vis2.add_geometry(cropped_pcd)
-        render_opt2 = vis2.get_render_option()
-        render_opt2.point_size = ptn_sz
         
-        # Apply saved camera view
-        view_control2 = vis2.get_view_control()
-        view_control2.convert_from_pinhole_camera_parameters(camera_params, allow_arbitrary=True)
-        
-        vis2.run()
-        vis2.destroy_window()
-        
-        picked_indices = vis2.get_picked_points()
-        np_points = np.asarray(cropped_pcd.points)
+        picked_indices = vis.get_picked_points()
+        np_points = np.asarray(pcd.points)
         picked_xyz = []
         for idx in picked_indices:
             xyz = np_points[idx]
