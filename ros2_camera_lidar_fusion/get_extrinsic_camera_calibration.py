@@ -36,7 +36,7 @@ class CameraLidarExtrinsicNode(Node):
         # Read in file names
         self.corr_file = config_file['general']['correspondence_file']
         self.camera_yaml = config_file['general']['camera_intrinsic_calibration']
-        self.file = config_file['general']['camera_extrinsic_calibration']
+        self.output_file = config_file['general']['camera_extrinsic_calibration']
         
         # Setup paths
         self.this_pkg_path = Path().home() / config_file['general']['ros_ws_name'] / 'src'
@@ -127,19 +127,18 @@ class CameraLidarExtrinsicNode(Node):
 
         self.get_logger().info(f"Transformation matrix (LiDAR -> Camera):\n{T_lidar_to_cam}") # Tcl 
 
-        # TODO need to fix path using new path module
-        # if not os.path.exists(self.output_dir):
-        #     os.makedirs(self.output_dir)
+        if not self.output_dir.exists():
+            raise FileNotFoundError(f"Data directory must exist, redo step 1")
 
-        # out_yaml = os.path.join(self.output_dir, self.file)
-        # data_out = {
-        #     "extrinsic_matrix": T_lidar_to_cam.tolist()
-        # }
+        out_yaml = self.output_dir / self.output_file
+        data_out = {"T_lidar_to_cam": T_lidar_to_cam.tolist()}
 
-        # with open(out_yaml, 'w') as f:
-        #     yaml.dump(data_out, f, sort_keys=False)
+        with open(out_yaml.as_posix(), 'w') as f:
+            yaml.dump(data_out, f, sort_keys=False)
 
-        # self.get_logger().info(f"Extrinsic matrix saved to: {out_yaml}")
+        self.get_logger().info(f"T_lidar_to_cam matrix saved to: {out_yaml}")
+
+        raise SystemExit
 
 
 def main(args=None):

@@ -73,9 +73,22 @@ class ImageCloudCorrespondenceNode(Node):
             self.get_logger().info(f"\nSelected {len(cloud_points)} points in the cloud.\n")
 
             out_txt = os.path.join(self.data_dir, self.file)
-            # Assumes the order in which 2D points and 3D points were picked, are preserved
-            with open(out_txt, 'w') as f:
-                f.write("# u, v, x, y, z\n")
+
+            # Check if file exists and has header
+            file_exists = os.path.isfile(out_txt)
+            has_header = False
+            if file_exists:
+                with open(out_txt, 'r') as f:
+                    first_line = f.readline()
+                    has_header = first_line.startswith("# u, v, x, y, z")
+
+            mode = 'w' if prefix == file_pairs[0][0] else 'a'
+
+            print(f"File writer mode: {mode}")
+            with open(out_txt, mode) as f:
+                if not has_header:
+                    f.write("# u, v, x, y, z\n")
+
                 min_len = min(len(image_points), len(cloud_points))
                 for i in range(min_len):
                     (u, v) = image_points[i]
