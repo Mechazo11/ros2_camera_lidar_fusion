@@ -113,7 +113,6 @@ class LidarCameraProjectionNode(Node):
         self.image_topic = config_file['camera']['image_topic']
         self.lidar_topic = config_file['lidar']['lidar_topic']
 
-     
         self.T_lidar_to_cam = load_extrinsic_matrix(self.extrinsic_yaml)
         self.camera_matrix, self.dist_coeffs = load_camera_calibration(self.camera_yaml)
 
@@ -143,7 +142,7 @@ class LidarCameraProjectionNode(Node):
                 self.image_topic
             )
         
-        self.lidar_sub = Subscriber(self, PointCloud2, lidar_topic)
+        self.lidar_sub = Subscriber(self, PointCloud2, self.lidar_topic)
 
         self.ts = ApproximateTimeSynchronizer(
             [self.image_sub, self.lidar_sub],
