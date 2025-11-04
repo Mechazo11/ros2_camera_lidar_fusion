@@ -123,7 +123,6 @@ class LidarCameraProjectionNode(Node):
         self.lidar_topic = config_file['lidar']['lidar_topic']
         self.projected__image_topic = config_file['camera']['projected_topic']
 
-
         self.T_lidar_to_cam = load_extrinsic_matrix(self.extrinsic_yaml)
         self.camera_matrix, self.dist_coeffs = load_camera_calibration(self.camera_yaml)
 
@@ -166,7 +165,14 @@ class LidarCameraProjectionNode(Node):
         
     def sync_callback(self, image_msg: Image, lidar_msg: PointCloud2):
         """Return a pair of image-lidar scan synchronized by time"""
-        cv_image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='bgr8')
+
+        if self.is_compressed:
+            cv_image = self.bridge.compressed_imgmsg_to_cv2(image_msg, 'passthrough')
+        else:
+            cv_image = self.bridge.imgmsg_to_cv2(image_msg, 'passthrough')
+
+        if len(cv_image.shape) == 2:  # grayscale
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
 
         xyz_lidar = pointcloud2_to_xyz_array_fast(lidar_msg, skip_rate=self.skip_rate)
         n_points = xyz_lidar.shape[0]
