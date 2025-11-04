@@ -18,7 +18,7 @@ chessboard:
   square_size_meters: 0.41
 
 general:
-  ros_ws_name: ros2_test_ws
+  ros_ws_name: ros2_ws
   config_folder: ros2_camera_lidar_fusion/config
   data_folder: ros2_camera_lidar_fusion/data
   correspondence_file: ros2_camera_lidar_fusion_correspondences.txt

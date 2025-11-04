@@ -5,6 +5,8 @@
 
 A ROS2 package for calculating **intrinsic** and **extrinsic calibration** between camera and LiDAR sensors. This repository provides an intuitive workflow to fuse data from these sensors, enabling precise projection of LiDAR points into the camera frame and offering an efficient approach to sensor fusion.
 
+**11/03/2025** Misalignment issue reported in the original repo: https://github.com/CDonosoK/ros2_camera_lidar_fusion/issues/9, is also observed. I am no longer working on this fork anymore
+
 ## Visual Overview
 
 * Credit: CDonosoK

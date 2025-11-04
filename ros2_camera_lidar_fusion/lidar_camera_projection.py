@@ -47,7 +47,7 @@ def load_extrinsic_matrix(yaml_path: Path) -> np.ndarray:
         raise KeyError(f"YAML {yaml_path} has no 'T_lidar_to_cam' key.")
 
     matrix_list = data['T_lidar_to_cam']
-    T = np.array(matrix_list, dtype=np.float64)
+    T = np.array(matrix_list, dtype=np.float64).reshape((4,4))
     if T.shape != (4, 4):
         raise ValueError("Extrinsic matrix is not 4x4.")
     return T
