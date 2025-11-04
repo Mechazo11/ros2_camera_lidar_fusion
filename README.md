@@ -49,7 +49,6 @@ colcon build --symlink-install
 source ./install/setup.bash
 ```
 
-
 ## Usage
 
 ### Initial setup
@@ -86,27 +85,23 @@ ros2 run ros2_camera_lidar_fusion get_extrinsic_camera_calibration --ros-args -p
 
 ### Test visualization
 
+This step requires three terminals
+
+* In first terminal activate the `LidarCameraProjection` node
+
 ```bash
 ros2 run ros2_camera_lidar_fusion lidar_camera_projection --ros-args -p config_file:=nyuapril_ptah.yaml
 ```
 
-### Workflow
-Follow these steps to perform calibration and data fusion:
+* In second terminal start playing the rosbag. For example
 
-1. **Data Recording**  
-   Use `save_sensor_data.py` to capture and save synchronized data from the camera and LiDAR.
+```bash
+ros2 bag play ptah_ros2.mcap -r 0.5 
+```
 
-2. **Intrinsic Calibration**  
-   Run `get_intrinsic_camera_calibration.py` to generate the intrinsic calibration file for the camera.
+* In third, run ```rviz2 rviz2``` and open the ```rviz/sample_viewer.rviz``` to see the following
 
-3. **Point Correspondence**  
-   Execute `extract_points.py` to manually select corresponding points between camera and LiDAR. This generate the `ros2_camera_lidar_fusion_correspondences.txt` file
 
-4. **Extrinsic Calibration**  
-   Run `get_extrinsic_camera_calibration.py` to compute the transformation matrix between camera and LiDAR.
-
-5. **LiDAR Projection**  
-   Use `lidar_camera_projection.py` to project LiDAR points into the camera frame for visualization and analysis.
 
 ### Running Nodes
 To execute a specific node, use the following command:
@@ -161,3 +156,21 @@ Once built, launch the container using:
 ```bash
 sh run.sh
 ```
+
+### Workflow
+Follow these steps to perform calibration and data fusion:
+
+1. **Data Recording**  
+   Use `save_sensor_data.py` to capture and save synchronized data from the camera and LiDAR.
+
+2. **Intrinsic Calibration**  
+   Run `get_intrinsic_camera_calibration.py` to generate the intrinsic calibration file for the camera.
+
+3. **Point Correspondence**  
+   Execute `extract_points.py` to manually select corresponding points between camera and LiDAR. This generate the `ros2_camera_lidar_fusion_correspondences.txt` file
+
+4. **Extrinsic Calibration**  
+   Run `get_extrinsic_camera_calibration.py` to compute the transformation matrix between camera and LiDAR.
+
+5. **LiDAR Projection**  
+   Use `lidar_camera_projection.py` to project LiDAR points into the camera frame for visualization and analysis.

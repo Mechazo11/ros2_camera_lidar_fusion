@@ -4,7 +4,7 @@ lidar:
 
 camera:
   image_topic: /ptah/forward/infra1/image_rect_raw/compressed
-  projected_topic: ""
+  projected_topic: /ros2_camera_lidar_fusion/lidar_proj_imgz
   is_compressed: True
   image_size:
     width: 640
